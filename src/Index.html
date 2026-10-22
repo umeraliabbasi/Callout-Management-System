@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shift Call-Out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --violet:#57068c; --violet-deep:#3d0463; --ink:#1c1723; --paper:#f6f4f9;
+  --surface:#fff; --line:#e9e3f1; --muted:#7c7488;
+  --proper:#0f8a5f; --amber:#b9770a; --orange:#d1571c; --red:#c8102e;
+  --shadow:0 1px 2px rgba(28,23,35,.05),0 10px 30px rgba(87,6,140,.06);
+  --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;display:flex;justify-content:center}
+.app{width:100%;max-width:480px;min-height:100vh;background:var(--paper);
+  display:flex;flex-direction:column}
+.idbar{display:flex;align-items:center;gap:8px;padding:12px 18px;font-size:12.5px;color:var(--muted);
+  border-bottom:1px solid var(--line);background:var(--surface)}
+.idbar .dot{width:7px;height:7px;border-radius:50%;background:var(--proper)}
+.idbar b{color:var(--ink);font-weight:600}
+.idbar.err{color:#b0223a;background:#fdeaee;border-bottom-color:#f6c9d3}
+.idbar .dot.err{background:#c8102e}
+.wrap{flex:1;padding:20px 18px 40px}
+.crumbs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.crumb{font-size:11px;background:#efe8f7;color:var(--violet);padding:4px 9px;border-radius:20px;
+  font-weight:600;font-family:'Space Grotesk'}
+.kicker{font-family:'Space Grotesk';font-weight:600;font-size:11.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--violet);margin-bottom:6px}
+h1{font-family:'Space Grotesk';font-weight:700;font-size:23px;line-height:1.18;margin:0 0 6px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 20px;line-height:1.45}
+.step{animation:rise .26s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.opt{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:15px 16px;margin-bottom:10px;cursor:pointer;font:inherit;color:var(--ink);
+  box-shadow:var(--shadow);transition:transform .12s,border-color .12s;display:flex;align-items:center;gap:12px}
+.opt:hover{transform:translateY(-1px);border-color:#d3c2e8}
+.opt:active{transform:scale(.99)}
+.opt .lead{font-weight:600;font-size:15px}
+.opt .desc{color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.4}
+.opt .body{flex:1;min-width:0}
+.opt .chev{color:#cabbdd;font-size:20px}
+.opt.sel{border-color:var(--violet);box-shadow:0 0 0 2px rgba(87,6,140,.15),var(--shadow)}
+.opt.loc{font-size:11px}
+.pill{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;
+  background:#f0ecf5;color:var(--muted);margin-left:auto;white-space:nowrap;font-family:'Space Grotesk'}
+label{display:block;font-weight:600;font-size:13px;margin:16px 2px 8px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:12px;padding:13px 13px;box-shadow:var(--shadow)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--violet);outline-offset:1px;border-color:transparent}
+textarea{resize:none;min-height:84px}
+.timegrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tslot{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 8px;
+  cursor:pointer;font:inherit;font-weight:600;font-size:13px;box-shadow:var(--shadow);text-align:center}
+.tslot:hover{border-color:#d3c2e8}
+.tslot.sel{border-color:var(--violet);color:var(--violet);box-shadow:0 0 0 2px rgba(87,6,140,.15)}
+.dow{display:inline-block;margin-top:8px;font-size:13px;color:var(--muted)}
+.dow b{color:var(--ink);font-weight:600}
+.btn{width:100%;font:inherit;font-weight:600;font-size:15px;border:none;border-radius:13px;
+  padding:15px;cursor:pointer;margin-top:20px;transition:filter .12s}
+.btn:active{filter:brightness(.94)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--violet);color:#fff;box-shadow:0 6px 18px rgba(87,6,140,.26)}
+.btn.ghost{background:transparent;color:var(--muted);box-shadow:none;margin-top:8px}
+.back{background:none;border:none;color:var(--violet);font:inherit;font-weight:600;font-size:14px;
+  padding:4px 0;margin-bottom:12px;cursor:pointer}
+/* classification banner */
+.banner{border-radius:var(--radius);padding:16px 17px;margin-bottom:6px;color:#fff}
+.banner .tier{font-family:'Space Grotesk';font-weight:700;font-size:12px;letter-spacing:.1em;
+  text-transform:uppercase;opacity:.9}
+.banner h2{font-family:'Space Grotesk';font-size:20px;margin:4px 0 6px}
+.banner p{margin:0;font-size:13px;line-height:1.45;opacity:.95}
+.b-proper{background:linear-gradient(135deg,#12996b,#0d7a53)}
+.b-amber{background:linear-gradient(135deg,#c9850f,#a76b06)}
+.b-orange{background:linear-gradient(135deg,#dc6122,#b84a15)}
+.b-red{background:linear-gradient(135deg,#d81b39,#a50e26)}
+.notif{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 4px;margin:14px 0;box-shadow:var(--shadow)}
+.notif .n{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-bottom:1px solid var(--line)}
+.notif .n:last-child{border-bottom:none}
+.notif .ic{flex:0 0 auto;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:14px;background:#f0ecf5}
+.notif .n.call .ic{background:#fdeaee}
+.notif .txt{flex:1;font-size:13px;line-height:1.4}
+.notif .txt b{font-weight:600}
+.notif .txt .to{color:var(--muted);font-size:12px}
+.callbox{background:#fdeaee;border:1px solid #f6c9d3;border-radius:14px;padding:14px 16px;margin:14px 0}
+.callbox .h{font-weight:700;color:var(--red);font-size:14px;font-family:'Space Grotesk';margin-bottom:8px}
+.callbox a{display:block;color:var(--red);font-weight:600;text-decoration:none;font-size:15px;padding:4px 0}
+.ack{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:13px;margin-top:12px;cursor:pointer;box-shadow:var(--shadow)}
+.ack input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;box-shadow:none}
+.ack span{font-size:13px;line-height:1.4}
+.review{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 16px;box-shadow:var(--shadow);margin-bottom:4px}
+.review .r{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.review .r:last-child{border-bottom:none}
+.review .r span:first-child{color:var(--muted)}
+.review .r span:last-child{font-weight:600;text-align:right}
+.done{text-align:center;padding:34px 6px}
+.check{width:66px;height:66px;border-radius:50%;background:var(--proper);margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;animation:pop .34s ease both}
+.check.warn{background:var(--red)}
+@keyframes pop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+.check svg{width:32px;height:32px;stroke:#fff;stroke-width:3.5;fill:none}
+.done h2{font-family:'Space Grotesk';margin:0 0 6px}
+.flag{background:#fff8e6;border:1px dashed #e6c65a;border-radius:10px;padding:10px 12px;font-size:12px;
+  color:#8a6d16;margin-top:16px;line-height:1.45}
+.dayhint{font-size:12px;color:var(--muted);background:#f0ecf5;border-radius:9px;padding:8px 11px;margin:10px 0 2px;line-height:1.4}
+.daywarn{font-size:12px;color:#8a6d16;background:#fff8e6;border:1px solid #e6c65a;border-radius:9px;padding:8px 11px;margin:10px 0 2px;line-height:1.4}
+.dateerr{font-size:13px;color:#b0223a;background:#fdeaee;border:1px solid #f6c9d3;border-radius:10px;padding:10px 12px;margin:10px 0 2px;line-height:1.4;font-weight:500}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="idbar"><span class="dot" style="background:#c9bcd9"></span>Select your name to begin</div>
+  <div class="wrap"><div id="view"></div></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG  — everything editable lives here
+   ============================================================ */
+const CONFIG = {
+  // Roster of ambassador NAMES for the dropdown. PROTOTYPE list below.
+  // In the published app this is replaced by the names pulled from the
+  // "Ambassador Names" tab of the master sheet (injected as window.__ROSTER__).
+  // The sheet holds name + email; the backend maps the picked name -> email
+  // for the confirmation message, so ambassadors never type an email here.
+  ROSTER_NAMES: [
+    'Alex Rivera','Blake Chen','Casey Morgan','Dana Patel','Emery Brooks',
+    'Finley Ward','Jordan Lee','Kai Nguyen','Riley Santos',
+  ],
+
+  SOD_EMAIL: 'sod@example.com',
+  TOUR_SUP_EMAIL: 'tour-supervisors@example.com',
+  INVITED_NOTIFY: ['administrator1@example.com', 'administrator2@example.com'],
+  // Who to CALL for a day-of call-out — always the SODs.
+  DAYOF_CALL: {
+    '400':      {name:'400 SOD',    phone:'000-000-0000'},
+    'Bonomi':   {name:'Bonomi SOD', phone:'000-000-0000'},
+  },
+
+  // DTS supervisor keyed by the shift's day of week
+  DTS: {
+    Monday:   {name:'Monday DTS',        email:'mondaydts@example.com'},
+    Tuesday:  {name:'Tuesday DTS',      email:'tuesdaydts@example.com'},
+    Wednesday:{name:'Wednesday DTS',        email:'wednesdaydts@example.com'},
+    Thursday: {name:'Thursday DTS',        email:'thursdaydts@example.com'},
+    Friday:   {name:'Friday DTS',        email:'fridaydts@example.com'},
+    Saturday: {name:'Weekend DTS',  email:'weekenddts@example.com'},
+    Sunday:   {name:'Weekend DTS',  email:'weekenddts@example.com'},
+  },
+
+  // Shift types. Location tag (in parens) drives which SOD to call day-of.
+  REGULAR: [
+    'Admissions Center Coverage (Bonomi)',
+    'Brooklyn - Mingler (Brooklyn)',
+    'Brooklyn - Tour Guide (Brooklyn)',
+    'College Connection - Tour Guide',
+    'Community Partner / CBO - Tour Guide',
+    'Discord Support (Virtual)',
+    'Group Tour - Tour Guide',
+    'In-Person Mingler (Bonomi)',
+    'Live Virtual Tour Guide (Virtual)',
+    'Office Hours',
+    'Transfer Student - Tour Guide',
+    'Virtual Information Session Panelist (Virtual)',
+    'WSP Tour Guide (Bonomi)',
+    'Other/My shift is not listed'
+  ],
+  TRAINING: [
+    'Brooklyn - Evaluation Tour (Coach)',
+    'Brooklyn - Evaluation Tour (Trainee)',
+    'Brooklyn - Shadow Tour (Trainee)',
+    'First Buddy Tour (Coach)',
+    'First Buddy Tour (Trainee)',
+    'Second Buddy Tour (Coach)',
+    'Second Buddy Tour (Trainee)',
+    'Shadow Tour (Trainee)',
+    'WSP Evaluation Tour (Coach)',
+    'WSP Evaluation Tour (Trainee)',
+    'Other/My shift is not listed'
+  ],
+  MARQUEE: [
+    'Open House: Senior Day',
+    'Open House: Spotlight Saturday',
+    'Weekend on the Square',
+    'Violet LaunchPad',
+    'Meet Us on the Square (WSP)',
+    'Meet Us on the Commons (Brooklyn)',
+    'Other'
+  ],
+  // Marquee events routed to GA/XME + Scheduling. All others → DTS + SOD-if-late.
+  MARQUEE_GROUP_A: ['Weekend on the Square', 'Open House: Spotlight Saturday'],
+
+  // Real usual-times per shift (24h internally; label is what the user sees).
+  // Shifts not listed here (virtual + training) fall back to manual entry.
+  TIME_SLOTS_BY_TYPE: {
+    'Office Hours': [
+      {label:'9:45 – 12:00', start:'09:45', end:'12:00'},
+      {label:'11:45 – 2:00', start:'11:45', end:'14:00'},
+      {label:'1:45 – 4:00',  start:'13:45', end:'16:00'},
+    ],
+    'In-Person Mingler (Bonomi)': [
+      {label:'10:15 – 11:45', start:'10:15', end:'11:45'},
+      {label:'12:15 – 1:45',  start:'12:15', end:'13:45'},
+      {label:'2:15 – 3:45',   start:'14:15', end:'15:45'},
+    ],
+    'Admissions Center Coverage (Bonomi)': [
+      {label:'8:45 – 11:00',  start:'08:45', end:'11:00'},
+      {label:'10:45 – 1:00',  start:'10:45', end:'13:00'},
+      {label:'12:45 – 3:00',  start:'12:45', end:'15:00'},
+      {label:'2:45 – 5:00',   start:'14:45', end:'17:00'},
+    ],
+    'WSP Tour Guide (Bonomi)': [
+      {label:'10:30 – 12:30', start:'10:30', end:'12:30'},
+      {label:'12:30 – 2:30',  start:'12:30', end:'14:30'},
+      {label:'2:30 – 4:30',   start:'14:30', end:'16:30'},
+    ],
+    'Brooklyn - Tour Guide (Brooklyn)': [
+      {label:'10:30 – 12:15', start:'10:30', end:'12:15'},
+      {label:'12:30 – 2:15',  start:'12:30', end:'14:15'},
+    ],
+    'Brooklyn - Mingler (Brooklyn)': [
+      {label:'10:15 – 11:45', start:'10:15', end:'11:45'},
+      {label:'12:15 – 1:30',  start:'12:15', end:'13:30'},
+    ],
+    'Community Partner / CBO - Tour Guide': [
+      {label:'11:00 – 12:30', start:'11:00', end:'12:30'},
+      {label:'1:00 – 2:30',   start:'13:00', end:'14:30'},
+      {label:'3:00 – 4:30',   start:'15:00', end:'16:30'},
+    ],
+  },
+
+  // Optional day-of-week rules. Shows a hint, and a soft warning on mismatch.
+  DAY_HINTS: {
+    'Brooklyn - Tour Guide (Brooklyn)': {days:['Thursday'], note:'Brooklyn tours run Thursdays only.'},
+    'Brooklyn - Mingler (Brooklyn)': {days:['Thursday'], note:'Brooklyn shifts run Thursdays only.'},
+    'Community Partner / CBO - Tour Guide':
+      {days:['Tuesday'], note:'CBO tours run Tuesdays — use Custom if these times don\'t match.'},
+  },
+
+  REASONS: [
+    'Academic conflict (recitation, lab, exam)',
+    'Illness (feeling unwell, COVID-19 contact)',
+    'Old availability (class schedule change)',
+    'Other university obligation (e.g. residential life, student affairs)',
+    'Other professional obligation (job, internship, interview)',
+    'Personal (exam prep, family visit, medical appt)',
+    'Travel (leaving for break, going home)',
+    'Other'
+  ],
+};
+
+/* Training shifts that run on the WSP Tour Guide schedule share its time slots. */
+(function(){
+  const wsp = CONFIG.TIME_SLOTS_BY_TYPE['WSP Tour Guide (Bonomi)'];
+  ['Shadow Tour (Trainee)','First Buddy Tour (Trainee)','First Buddy Tour (Coach)',
+   'Second Buddy Tour (Trainee)','Second Buddy Tour (Coach)',
+   'WSP Evaluation Tour (Trainee)','WSP Evaluation Tour (Coach)'
+  ].forEach(k=>{ CONFIG.TIME_SLOTS_BY_TYPE[k] = wsp; });
+})();
+
+/* ============================================================
+   ROSTER — names shown in the pick-your-name dropdown.
+   Prototype: CONFIG.ROSTER_NAMES. Production: window.__ROSTER__
+   injected from the "Ambassador Names" sheet tab.
+   ============================================================ */
+let ROSTER = (CONFIG.ROSTER_NAMES || []).slice().sort((a,b)=>a.localeCompare(b));
+const HAS_BACKEND = (typeof google!=='undefined' && google.script && google.script.run);
+if(HAS_BACKEND){
+  google.script.run.withSuccessHandler(function(names){
+    if(names && names.length){ ROSTER = names.slice().sort((a,b)=>a.localeCompare(b)); if(S.step==='identify') renderNameList(); }
+  }).getRosterNames();
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let S = {};
+let sessionCount = 0;
+// Keep the picked name across the "another shift?" loop; only ask once per session.
+function reset(){ const name = S.name || ''; S = { name, step: name?'category':'identify',
+  category:'', shiftType:'', shiftName:'', marqueeEvent:'', date:'', dow:'',
+  start:'', end:'', slotLabel:'', reason:'', reasonOther:'', detail:'', ackCount:false, _search:'' }; render(); }
+// Full restart from the name picker (e.g. "Not you?").
+function changeName(){ S.name=''; S._search=''; S.step='identify'; render(); }
+
+/* ============================================================
+   LOGIC
+   ============================================================ */
+// ---- NYC-time helpers: all shift timing is America/New_York, not device time ----
+function nycOffsetMs(instant){
+  const dtf = new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour12:false,
+    year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const p={}; dtf.formatToParts(new Date(instant)).forEach(x=>{ if(x.type!=='literal') p[x.type]=x.value; });
+  const hh = p.hour==='24'?0:+p.hour;
+  const asUTC = Date.UTC(+p.year,+p.month-1,+p.day,hh,+p.minute,+p.second);
+  return asUTC - instant;
+}
+// Convert an NYC wall-clock (Y,M,D,h,m) to an absolute instant (ms).
+function nycToInstant(y,mo,d,h,mi){
+  const guess = Date.UTC(y,mo-1,d,h,mi);
+  let off = nycOffsetMs(guess), inst = guess - off;
+  const off2 = nycOffsetMs(inst);
+  if(off2!==off) inst = guess - off2;   // DST-boundary refine
+  return inst;
+}
+function classify(){
+  if(!S.date || !S.start) return null;
+  const [y,mo,d] = S.date.split('-').map(Number);
+  const [h,mi]   = S.start.split(':').map(Number);
+  const startInstant = nycToInstant(y,mo,d,h,mi);
+  const now = Date.now();
+  const hrs = (startInstant - now)/36e5;
+  const prev = new Date(Date.UTC(y,mo-1,d) - 864e5);   // calendar day before the shift
+  const nightBefore = nycToInstant(prev.getUTCFullYear(), prev.getUTCMonth()+1, prev.getUTCDate(), 22, 0); // 10pm NYC
+  const dayOf9 = nycToInstant(y,mo,d, 9,0);             // 9am NYC on the day of the shift
+  if(hrs > 72) return 'proper';
+  if(now < nightBefore) return 'imp_before10';
+  if(now < dayOf9) return 'imp_after10';
+  return 'imp_dayof';
+}
+const TIERS = {
+  proper:      {cls:'b-proper', tier:'Proper call-out', h:'More than 72 hours out',
+                p:'Standard call-out. Just submit.'},
+  imp_before10:{cls:'b-amber', tier:'Improper · under 72h', h:'Less than 72 hours away',
+                p:'Counts as one of your 5 improper call-outs. Your DTS supervisor is notified automatically.'},
+  imp_after10: {cls:'b-orange', tier:'Improper · after 10pm', h:'After 10pm the night before',
+                p:'Counts as improper. DTS and the SOD are both notified automatically.'},
+  imp_dayof:   {cls:'b-red', tier:'Improper · day of', h:'After 9am on the day of the shift',
+                p:'Counts as improper. DTS and SOD are emailed automatically — and you must still CALL the SOD.'},
+};
+function isMarqueeGroupA(ev){ return (CONFIG.MARQUEE_GROUP_A||[]).indexOf(String(ev||''))!==-1; }
+function locationOf(t){
+  if(t==='Office Hours') return '400';       // Office Hours lives at 400 (no tag in the name)
+  if(/\(400/.test(t)) return '400';
+  if(/\(Bonomi\)/.test(t)) return 'Bonomi';
+  if(/\(Brooklyn\)/.test(t)) return 'Brooklyn';
+  if(/\(Virtual\)/.test(t)) return 'Virtual';
+  return '';
+}
+// Day-of call contact(s) for the current shift. Known location → that contact;
+// unknown (marquee/invited) → all distinct contacts.
+function dayOfContacts(){
+  const loc = S.shiftType?locationOf(S.shiftType):'';
+  const map = CONFIG.DAYOF_CALL;
+  if(loc && map[loc]) return [map[loc]];      // 400 → 400 SOD, Bonomi → Bonomi SOD
+  return [map['Bonomi'], map['400']];         // Brooklyn / Virtual / training / marquee / invited → both SODs
+}
+// Which notifications fire, given current state + classification
+function notifications(c){
+  const list = [];
+  list.push({ic:'✅', b:'Confirmation email', to:S.name+' (email from roster)'});
+  const master = {ic:'📄', b:'Logged to Master Call-Out Sheet', to:'all DTS + SOD can view'};
+  list.push(master);
+  const goesToCoverage = (S.category==='regular' || S.category==='marquee');
+  if(goesToCoverage) list.push({ic:'🔁', b:'Added to Coverage Sheet', to:'open for pickup by other ambassadors'});
+  if(c!=='proper'){
+    const d = CONFIG.DTS[S.dow];
+    if(d) list.push({ic:'📧', b:'Email to DTS — '+d.name, to:d.email});
+  }
+  if(c==='imp_after10' || c==='imp_dayof'){
+    list.push({ic:'📧', b:'Email to SOD', to:CONFIG.SOD_EMAIL});
+  }
+  if(S.category==='training'){
+    list.push({ic:'📧', b:'Email to Tour Training Supervisors', to:CONFIG.TOUR_SUP_EMAIL});
+  }
+  if(S.category==='invited'){
+    list.push({ic:'📧', b:'Email to program administrators', to:CONFIG.INVITED_NOTIFY.join(', ')});
+  }
+  return list;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const view = ()=>document.getElementById('view');
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function crumbs(){
+  const c=[];
+  if(S.category) c.push(({regular:'Regular',training:'Tour Training',marquee:'Marquee Event',invited:'Invited'})[S.category]);
+  if(S.marqueeEvent) c.push(S.marqueeEvent);
+  if(S.shiftType) c.push(S.shiftType.replace(/\s*\(.*/,''));
+  if(S.shiftName) c.push(S.shiftName);
+  if(S.date) c.push(S.dow+' '+fmtDate(S.date));
+  return c.length? '<div class="crumbs">'+c.map(x=>'<span class="crumb">'+esc(x)+'</span>').join('')+'</div>' : '';
+}
+function fmtDate(d){ const [y,m,day]=d.split('-'); return m+'/'+day+'/'+y; }
+function dowOf(d){ return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(d+'T00:00').getDay()]; }
+function todayStr(){ const p={}; new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).forEach(x=>{ if(x.type!=='literal') p[x.type]=x.value; }); return `${p.year}-${p.month}-${p.day}`; }
+function isPastDate(){ return !!S.date && S.date < todayStr(); }
+
+function render(){
+  updateIdbar();
+  const v = view();
+  const fn = ({identify:C_identify, category:C_category, subtype:C_subtype, details:C_details, classify:C_classify, done:C_done, finished:C_finished})[S.step];
+  v.innerHTML = fn();
+  if(S.step==='identify') wireIdentify();
+  if(S.step==='details') wireDetails();
+  if(S.step==='classify') wireClassify();
+}
+function updateIdbar(){
+  const bar = document.querySelector('.idbar');
+  if(!bar) return;
+  bar.classList.remove('err');
+  if(S.name){
+    bar.innerHTML = `<span class="dot"></span>Ambassador: <b>${esc(S.name)}</b>`;
+  } else {
+    bar.innerHTML = `<span class="dot" style="background:#c9bcd9"></span>Select your name to begin`;
+  }
+}
+
+/* --- Step 0: pick your name from the roster --- */
+function C_identify(){
+  return `<div class="step">
+    <div class="kicker">Ambassador Program</div>
+    <h1>Select your name</h1>
+    <p class="sub">Start typing to find your name in the roster.</p>
+    <input id="nsearch" placeholder="Type your name…" autocomplete="off" value="${esc(S._search||'')}">
+    <div id="nlist" style="margin-top:12px"></div>
+    <p class="sub" style="margin-top:14px;font-size:12.5px">Name not listed? Message a <b>program administrator</b> to be added to the roster.</p>
+  </div>`;
+}
+function wireIdentify(){
+  const inp = document.getElementById('nsearch');
+  if(!inp) return;
+  inp.addEventListener('input', ()=>{ S._search = inp.value; renderNameList(); });
+  renderNameList();
+  inp.focus();
+}
+function renderNameList(){
+  const el = document.getElementById('nlist'); if(!el) return;
+  const q = (S._search||'').trim().toLowerCase();
+  if(!q){ el.innerHTML = ''; return; }   // wait for the ambassador to type
+  const list = ROSTER.filter(n=>n.toLowerCase().includes(q));
+  const shown = list.slice(0,40);
+  el.innerHTML = shown.length
+    ? shown.map(n=>`<button class="opt" onclick="pickName(${JSON.stringify(n).replace(/"/g,'&quot;')})"><div class="body"><div class="lead">${esc(n)}</div></div><div class="chev">›</div></button>`).join('')
+      + (list.length>40? `<p class="sub" style="font-size:12px">Keep typing to narrow ${list.length} names…</p>`:'')
+    : `<div class="empty">No matching names.</div>`;
+}
+function pickName(n){ S.name=n; S._search=''; S.step='category'; render(); }
+
+/* --- Step 1: category --- */
+function C_category(){
+  const opt = (id,lead,desc)=>`<button class="opt" onclick="pickCat('${id}')">
+     <div class="body"><div class="lead">${lead}</div><div class="desc">${desc}</div></div>
+     <div class="chev">›</div></button>`;
+  return `<div class="step">
+    <button class="back" onclick="changeName()">← Not ${esc(S.name)}?</button>
+    <div class="kicker">Ambassador Program</div>
+    <h1>Call out of a shift</h1>
+    <p class="sub">Select a shift category.</p>
+    ${opt('regular','Regularly Scheduled Shift','Appeared on your Humanity — most shifts')}
+    ${opt('training','Tour Training Shift','Shadow, buddy, walkthrough, or evaluation — pick your Trainee or Coach role')}
+    ${opt('marquee','Marquee Event Shift','Open House, Senior Day, Weekend on the Square')}
+    ${opt('invited','Invited Shift','Program Administrators reached out to you — VIP/private tour, panelist, etc.')}
+  </div>`;
+}
+function pickCat(c){ S.category=c; S.shiftType=''; S.marqueeEvent=''; S.shiftName=''; S.slotLabel=''; S.start=''; S.end=''; S.step='subtype'; render(); }
+
+/* --- Step 2: subtype --- */
+function C_subtype(){
+  const back = `<button class="back" onclick="S.step='category';render()">← Shift category</button>`;
+  if(S.category==='regular' || S.category==='training' || S.category==='marquee'){
+    const list = S.category==='regular'? CONFIG.REGULAR
+               : S.category==='training'? CONFIG.TRAINING : CONFIG.MARQUEE;
+    const btns = list.map(t=>{
+      const label = t.replace(/\s*\((Trainee|Coach)\)\s*$/,'').replace(/\s*\(([^)]*)\)\s*$/, m=>S.category==='regular'?'':m);
+      let tag = '';
+      if(S.category==='regular') tag = locationOf(t);
+      else if(S.category==='training'){ const m=t.match(/\((Trainee|Coach)\)\s*$/); tag = m? m[1] : ''; }
+      const pill = tag? `<span class="pill">${esc(tag)}</span>` : '';
+      const handler = S.category==='marquee' ? `pickMarquee(${JSON.stringify(t).replace(/"/g,'&quot;')})`
+                                             : `pickType(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
+      return `<button class="opt" onclick="${handler}">
+        <div class="body"><div class="lead">${esc(label)}</div></div>${pill}</button>`;
+    }).join('');
+    const h = S.category==='marquee'? 'Which event?' : 'Which shift?';
+    const sub = S.category==='marquee'? 'Select the marquee event.' : 'Select your shift.';
+    return `<div class="step">${back}${crumbs()}
+      <h1>${h}</h1>
+      <p class="sub">${sub}</p>${btns}</div>`;
+  }
+  // invited → free-text Humanity shift name
+  return `<div class="step">${back}${crumbs()}
+    <h1>Invited shift</h1>
+    <p class="sub">Enter the shift name exactly as it appears in Humanity.</p>
+    <label for="sname">Shift name (exactly as in Humanity)</label>
+    <input id="sname" placeholder="e.g. VIP Tour, Panelist" value="${esc(S.shiftName)}"
+      oninput="S.shiftName=this.value;document.getElementById('snext').disabled=!this.value.trim()">
+    <button class="btn primary" id="snext" ${S.shiftName.trim()?'':'disabled'}
+      onclick="S.step='details';render()">Continue</button></div>`;
+}
+function pickType(t){ S.shiftType=t; S.marqueeEvent=''; S.slotLabel=''; S.start=''; S.end=''; S.step='details'; render(); }
+function pickMarquee(ev){ S.marqueeEvent=ev; S.shiftType=''; S.shiftName=''; S.slotLabel=''; S.start=''; S.end=''; S.step='details'; render(); }
+
+/* --- Step 3: details (day/date/time) --- */
+function slotsForCurrent(){ return (S.shiftType && CONFIG.TIME_SLOTS_BY_TYPE[S.shiftType]) || []; }
+function needsHumanityName(){
+  if(S.category==='marquee') return true;
+  if((S.category==='regular'||S.category==='training') && S.shiftType==='Other/My shift is not listed') return true;
+  return false;
+}
+function C_details(){
+  const back = `<button class="back" onclick="S.step='subtype';render()">← Shift type</button>`;
+  const slots = slotsForCurrent();
+  const hint = S.shiftType && CONFIG.DAY_HINTS[S.shiftType];
+  const hintHTML = hint? `<div class="dayhint">${esc(hint.note)}</div>` : '';
+  const warnHTML = (hint && S.dow && !hint.days.includes(S.dow))
+    ? `<div class="daywarn">Heads up: you picked ${esc(S.dow)}, but this shift usually runs ${esc(hint.days.join('/'))}.</div>` : '';
+
+  let timeUI;
+  if(slots.length){
+    const btns = slots.map((s,i)=>
+      `<button class="tslot ${S.slotLabel===s.label?'sel':''}" onclick="pickSlot(${i})">${esc(s.label)}</button>`).join('');
+    timeUI = `<label>Shift time</label>
+      <div class="timegrid">${btns}
+        <button class="tslot ${S.slotLabel==='custom'?'sel':''}" onclick="pickSlot('custom')">Custom…</button></div>
+      <div id="customtime" style="display:${S.slotLabel==='custom'?'block':'none'}">
+        <label>Start / end (from Humanity)</label>
+        <div class="timegrid">
+          <input type="time" id="cstart" value="${S.start}" onchange="S.start=this.value">
+          <input type="time" id="cend" value="${S.end}" onchange="S.end=this.value"></div>
+      </div>`;
+  } else {
+    timeUI = `<label>Start / end time (from Humanity)</label>
+      <div class="timegrid">
+        <input type="time" id="cstart" value="${S.start}" onchange="S.start=this.value">
+        <input type="time" id="cend" value="${S.end}" onchange="S.end=this.value"></div>`;
+  }
+  const needName = needsHumanityName();
+  const nameUI = needName? `
+    <label for="hname">Shift name (exactly as it appears in Humanity)</label>
+    <input id="hname" placeholder="Type the exact Humanity name" value="${esc(S.shiftName||'')}"
+      oninput="S.shiftName=this.value;checkDetails()">` : '';
+
+  const past = isPastDate();
+  const pastErr = past? `<div class="dateerr">That date has already passed — you can't call out of a shift in the past. Pick today or later.</div>` : '';
+  const ok = S.date && S.start && S.end && !past && (!needName || (S.shiftName||'').trim());
+  return `<div class="step">${back}${crumbs()}
+    <h1>${needName?'Shift details':'When is the shift?'}</h1>
+    <p class="sub">${needName?'Enter the shift name, date, and time.':'Enter the date and time.'}</p>
+    ${nameUI}
+    <label for="sdate">Date of the shift</label>
+    <input type="date" id="sdate" min="${todayStr()}" value="${S.date}">
+    <div class="dow" id="dowline">${S.dow?('Day: <b>'+S.dow+'</b>'):''}</div>
+    ${pastErr}${hintHTML}${warnHTML}
+    ${timeUI}
+    <button class="btn primary" id="dnext" ${ok?'':'disabled'} onclick="toClassify()">See what to do →</button>
+  </div>`;
+}
+function wireDetails(){
+  const d=document.getElementById('sdate');
+  if(d) d.addEventListener('change',e=>{ S.date=e.target.value; S.dow=S.date?dowOf(S.date):''; render(); });
+  ['cstart','cend'].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener('change',checkDetails);});
+}
+function checkDetails(){ const b=document.getElementById('dnext'); if(!b) return;
+  const need = needsHumanityName();
+  b.disabled = !(S.date&&S.start&&S.end) || isPastDate() || (need && !(S.shiftName||'').trim()); }
+function pickSlot(i){
+  if(i==='custom'){ S.slotLabel='custom'; }
+  else { const s=slotsForCurrent()[i]; S.slotLabel=s.label; S.start=s.start; S.end=s.end; }
+  render();
+}
+function toClassify(){
+  if(isPastDate() || !(S.date&&S.start&&S.end)) return;
+  if(needsHumanityName() && !(S.shiftName||'').trim()) return;
+  S.step='classify'; render();
+}
+
+/* --- Step 4: classification + reason + submit --- */
+function infoBox(title, text, tone){
+  const col = tone==='blue'?'#2b5bb8':(tone==='amber'?'#b9770a':'#57068c');
+  const bg  = tone==='blue'?'#eef4ff':(tone==='amber'?'#fff4e6':'#f3ecfa');
+  const bd  = tone==='blue'?'#c9d9f6':(tone==='amber'?'#f3d199':'#e0d3f0');
+  return `<div style="background:${bg};border:1px solid ${bd};border-radius:14px;padding:13px 16px;margin:14px 0">
+    <div style="font-weight:700;color:${col};font-family:'Space Grotesk';font-size:13px;margin-bottom:3px">${title}</div>
+    <div style="font-size:13px;line-height:1.45;color:${col}">${text}</div></div>`;
+}
+// Builds the "who gets notified" sentence from the actual routing for this category/tier.
+function listJoin(a){ return a.length<=1 ? a.join('') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; }
+function bannerText(c){
+  const cat=S.category, training=cat==='training', invited=cat==='invited', marquee=cat==='marquee';
+  const groupA = marquee && isMarqueeGroupA(S.marqueeEvent);
+  if(c==='proper') return training ? 'Standard call-out. Tour Training is notified automatically.' : 'Standard call-out. Just submit.';
+  let who;
+  if(invited)      who = ['your DTS'];
+  else if(marquee) who = groupA ? ['Scheduling','GA/XME'] : (c==='imp_before10' ? ['your DTS'] : ['your DTS','the SOD']);
+  else { who = (c==='imp_before10') ? ['your DTS'] : ['your DTS','the SOD','GA/XME']; if(training) who.push('Tour Training'); }
+  let s = 'Counts as improper. ' + listJoin(who).replace(/^your/,'Your') + (who.length>1?' are':' is') + ' notified automatically.';
+  if(c==='imp_dayof' && !invited && !groupA) s += ' You must still CALL the SOD.';
+  return s;
+}
+function C_classify(){
+  const c = classify();
+  const t = TIERS[c];
+  const back = `<button class="back" onclick="S.step='details';render()">← Timing</button>`;
+  const improper = c!=='proper';
+  const regTrain = (S.category==='regular' || S.category==='training');
+  const marqueeGroupA = (S.category==='marquee' && isMarqueeGroupA(S.marqueeEvent));
+  const marqueeGroupB = (S.category==='marquee' && !marqueeGroupA);
+
+  // day-of SOD call — regular/training and marquee Group B (Senior Day / MOTS)
+  let callBox='';
+  if(c==='imp_dayof' && (regTrain || marqueeGroupB)){
+    const nums = dayOfContacts()
+      .map(x=>`<a href="tel:${x.phone.replace(/[^0-9]/g,'')}">${esc(x.name)} — ${esc(x.phone)}</a>`).join('');
+    callBox = `<div class="callbox"><div class="h">You must also CALL the SOD</div>${nums}</div>`;
+  }
+  // category-specific required actions
+  let instr='';
+  if(S.category==='invited')
+    instr += infoBox('Also required', 'Message the Program Administrator who invited you (or a GA) on <b>Slack</b>.', 'blue');
+  if(marqueeGroupA && improper)
+    instr += infoBox('Heads up', 'Scheduling and the XME team will be notified for this event.', 'amber');
+
+  const reasonOpts = CONFIG.REASONS.map(r=>`<option ${S.reason===r?'selected':''}>${esc(r)}</option>`).join('');
+  const ackText = 'I understand this counts as <b>one</b> of my 5 improper call-outs this semester.';
+
+  const needDetail = improper || S.category==='marquee' || S.reason==='Other';
+  const detailLabel = S.reason==='Other' ? 'Please explain your reason' : 'Describe your reason (required)';
+  const detailUI = needDetail? `
+    <label for="detail">${detailLabel}</label>
+    <textarea id="detail" placeholder="Be specific." oninput="S.detail=this.value;checkSubmit()">${esc(S.detail)}</textarea>` : '';
+  const ackUI = improper? `
+    <label class="ack"><input type="checkbox" ${S.ackCount?'checked':''} onchange="S.ackCount=this.checked;checkSubmit()">
+      <span>${ackText}</span></label>` : '';
+
+  return `<div class="step">${back}${crumbs()}
+    <div class="banner ${t.cls}"><div class="tier">${t.tier}</div><h2>${t.h}</h2><p>${bannerText(c)}</p></div>
+    ${callBox}${instr}
+    <label for="reason">Why are you calling out?</label>
+    <select id="reason" onchange="S.reason=this.value;render()">
+      <option value="" ${S.reason?'':'selected'} disabled>Select a reason…</option>${reasonOpts}</select>
+    ${detailUI}${ackUI}
+    <button class="btn primary" id="sub" onclick="submit('${c}')" disabled>Submit call-out</button>
+  </div>`;
+}
+function wireClassify(){ checkSubmit(); }
+function checkSubmit(){
+  const b=document.getElementById('sub'); if(!b) return;
+  const c=classify(); const improper=c!=='proper';
+  const needDetail = improper || S.category==='marquee' || S.reason==='Other';
+  let ok = !!S.reason;
+  if(needDetail) ok = ok && (S.detail||'').trim();
+  if(improper) ok = ok && S.ackCount;
+  b.disabled = !ok;
+}
+function submit(c){
+  const btn=document.getElementById('sub');
+  const payload={ name:S.name, category:S.category, shiftType:S.shiftType, shiftName:S.shiftName,
+    marqueeEvent:S.marqueeEvent, date:S.date, start:S.start, end:S.end, reason:S.reason, detail:S.detail };
+  if(HAS_BACKEND){
+    if(btn){ btn.textContent='Submitting…'; btn.disabled=true; }
+    google.script.run
+      .withSuccessHandler(function(res){ sessionCount++; S._final=(res&&res.classification)||c; S.step='done'; render(); })
+      .withFailureHandler(function(e){ if(btn){ btn.textContent='Submit call-out'; btn.disabled=false; }
+        alert('Could not submit: '+(e&&e.message?e.message:e)); })
+      .submitCallout(payload);
+  } else {
+    sessionCount++; S._final=c; S.step='done'; render();
+  }
+}
+function finish(){ S.step='finished'; render(); }
+
+/* --- Done --- */
+function C_done(){
+  const c=S._final; const dayof=c==='imp_dayof';
+  const shift = S.marqueeEvent ? (S.marqueeEvent + (S.shiftName?(' — '+S.shiftName):'')) : (S.shiftType || S.shiftName);
+  const rows = [
+    ['Ambassador', S.name],
+    ['Shift', shift],
+    ['Date', S.dow+', '+fmtDate(S.date)],
+    ['Time', (S.start||'?')+(S.end?(' – '+S.end):'')],
+    ['Classification', TIERS[c].tier],
+    ['Reason', S.reason],
+  ].map(([k,v])=>`<div class="r"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
+  const callReminder = dayof? `<div class="callbox"><div class="h">Don't forget — still call the SOD</div>
+     ${dayOfContacts().map(x=>`<a href="tel:${x.phone.replace(/[^0-9]/g,'')}">${esc(x.name)} — ${esc(x.phone)}</a>`).join('')}</div>`:'';
+  const count = sessionCount>1? `<p class="sub" style="text-align:center;margin-top:-4px">${sessionCount} call-outs logged this session.</p>`:'';
+  return `<div class="step done">
+    <div class="check ${dayof?'warn':''}"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></div>
+    <h2>Call-out ${dayof?'submitted':'logged'}</h2>
+    <p class="sub">${dayof?'One more required step below.':'You\'re all set.'}</p>
+    </div>
+    ${count}
+    ${callReminder}
+    <div class="review">${rows}</div>
+    <div style="margin-top:22px"></div>
+    <div class="kicker" style="text-align:center">Another shift to call out of?</div>
+    <button class="btn primary" onclick="reset()">Call out of another shift</button>
+    <button class="btn ghost" onclick="finish()">No, I'm done</button>`;
+}
+
+function C_finished(){
+  const n = sessionCount;
+  return `<div class="step done">
+    <div class="check"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></div>
+    <h2>All done</h2>
+    <p class="sub">${n} call-out${n===1?'':'s'} logged. You can close this tab.</p>
+    <div style="margin-top:22px"></div>
+    <button class="btn primary" onclick="sessionCount=0;reset()">Start over</button>
+    </div>`;
+}
+
+reset();
+</script>
+</body>
+</html>
